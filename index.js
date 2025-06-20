@@ -18,7 +18,8 @@ const {
   AudioPlayerStatus,
   getVoiceConnection,
 } = require('@discordjs/voice');
-const { token, clientId, guildId } = require('./config.json');
+const {  clientId, guildId } = require('./config.json');
+const token = process.env.TOKEN;
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
