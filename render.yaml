@@ -1,0 +1,15 @@
+services:
+  - type: worker
+    name: countdown-discord-bot
+    runtime: node
+    repo: https://github.com/dungnguyenDN/countdown-host
+    branch: main
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: TOKEN
+        sync: false
+      - key: CLIENT_ID
+        sync: false
+      - key: GUILD_ID
+        sync: false
