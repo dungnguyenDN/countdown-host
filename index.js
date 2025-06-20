@@ -18,9 +18,9 @@ const {
   AudioPlayerStatus,
   getVoiceConnection,
 } = require('@discordjs/voice');
+
 const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
-
 const token = process.env.TOKEN;
 
 const client = new Client({
@@ -62,7 +62,6 @@ function buildButtonRows() {
     );
   }
 
-  // Add extra control buttons (leave, stop)
   rows.push(new ActionRowBuilder().addComponents(extraButtons));
   return rows;
 }
@@ -137,13 +136,15 @@ client.on(Events.InteractionCreate, async interaction => {
       }
 
       const resource = createAudioResource(filePath);
+      player.stop(); // Stop any existing audio
       player.play(resource);
 
       await interaction.reply({ content: `▶️ Playing: ${file}` });
 
+      player.removeAllListeners(AudioPlayerStatus.Idle); // prevent stacking
       player.once(AudioPlayerStatus.Idle, async () => {
         try {
-          await interaction.followUp({
+          await interaction.channel.send({
             content: '✅ Countdown finished! What do you want to do next?',
             components: buildButtonRows(),
           });
@@ -172,6 +173,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
 client.login(token);
 
+// Keep web server alive (for Render free plan)
 const express = require('express');
 const app = express();
 
@@ -183,4 +185,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🌐 Web server is running on port ${PORT}`);
 });
-
