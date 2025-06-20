@@ -1,5 +1,7 @@
 const { REST, Routes, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { clientId, guildId } = require('./config.json');
+const clientId = process.env.CLIENT_ID;
+const guildId = process.env.GUILD_ID;
+
 const token = process.env.TOKEN;
 
 
