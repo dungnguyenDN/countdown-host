@@ -18,7 +18,9 @@ const {
   AudioPlayerStatus,
   getVoiceConnection,
 } = require('@discordjs/voice');
-const {  clientId, guildId } = require('./config.json');
+const clientId = process.env.CLIENT_ID;
+const guildId = process.env.GUILD_ID;
+
 const token = process.env.TOKEN;
 
 const client = new Client({
