@@ -40,6 +40,9 @@ const countdownButtons = [
   { id: 'count20', label: '2️⃣0️⃣ Countdown 20 to 0' },
   { id: 'count25', label: '2️⃣5️⃣ Countdown 25 to 0' },
   { id: 'count30', label: '3️⃣0️⃣ Countdown 30 to 0' },
+  { id: 'count35', label: '3️⃣5️⃣ Countdown 35 to 0' },
+  { id: 'count40', label: '4️⃣0️⃣ Countdown 40 to 0' },
+  { id: 'count45', label: '4️⃣5️⃣ Countdown 45 to 0' },
 ];
 
 const extraButtons = [
