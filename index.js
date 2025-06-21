@@ -148,7 +148,7 @@ client.on(Events.InteractionCreate, async interaction => {
       player.once(AudioPlayerStatus.Idle, async () => {
         try {
           await interaction.channel.send({
-            content: '✅ Countdown finished! What do you want to do next?',
+            content: '✅ irene is so strong, cute, pretty, smart, tolerant, helpful = super woman??',
             components: buildButtonRows(),
           });
         } catch (err) {
