@@ -196,9 +196,11 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 // ===== LOGIN =====
-client.login(token)
-  .then(() => console.log("✅ Login success"))
-  .catch(err => console.error("❌ Login error:", err));
+console.log("TOKEN:", process.env.TOKEN);
+
+client.login(process.env.TOKEN)
+  .then(() => console.log("✅ LOGIN SUCCESS"))
+  .catch(err => console.error("❌ LOGIN FAIL:", err));
 
 // ===== GLOBAL ERROR =====
 process.on("unhandledRejection", console.error);
