@@ -20,7 +20,7 @@ const rest = new REST({ version: '10' }).setToken(token);
 
     await rest.put(
       Routes.applicationGuildCommands(clientId, guildId),
-      { body: commands }
+      { body: [] }
     );
 
     console.log('✅ Successfully registered commands.');
