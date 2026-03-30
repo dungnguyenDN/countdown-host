@@ -18,6 +18,7 @@ const {
 //   AudioPlayerStatus,
 //   getVoiceConnection,
 // } = require('@discordjs/voice');
+let player = {};
 
 const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
