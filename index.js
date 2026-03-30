@@ -19,23 +19,35 @@ const {
   getVoiceConnection,
 } = require('@discordjs/voice');
 
-// ===== ENV =====
-const token = process.env.TOKEN;
+// ===== DEBUG =====
+console.log("🚀 Starting bot...");
+console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
+
+// ===== CHECK TOKEN =====
+if (!process.env.TOKEN) {
+  console.error("❌ TOKEN MISSING");
+  process.exit(1);
+}
 
 // ===== CLIENT =====
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
 });
 
-// ===== PLAYER =====
-const player = createAudioPlayer();
+// ===== LOGIN NGAY (QUAN TRỌNG) =====
+client.login(process.env.TOKEN)
+  .then(() => console.log("✅ LOGIN SUCCESS"))
+  .catch(err => console.error("❌ LOGIN FAILED:", err));
 
 // ===== READY =====
 client.once(Events.ClientReady, () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
-// ===== BUTTON DATA (FULL 5 → 45) =====
+// ===== PLAYER =====
+const player = createAudioPlayer();
+
+// ===== BUTTON DATA =====
 const countdownButtons = [
   { id: 'count5', label: '5️⃣' },
   { id: 'count10', label: '🔟' },
@@ -48,7 +60,7 @@ const countdownButtons = [
   { id: 'count45', label: '4️⃣5️⃣' },
 ];
 
-// ===== BUILD BUTTON ROWS =====
+// ===== BUILD BUTTON =====
 function buildButtons() {
   const rows = [];
 
@@ -79,6 +91,8 @@ function buildButtons() {
 client.on(Events.InteractionCreate, async interaction => {
   try {
 
+    console.log("🔥 Interaction received");
+
     // ===== SLASH COMMAND =====
     if (interaction.isChatInputCommand() && interaction.commandName === 'countdown') {
       return interaction.reply({
@@ -90,14 +104,15 @@ client.on(Events.InteractionCreate, async interaction => {
     // ===== BUTTON =====
     if (interaction.isButton()) {
 
-      await interaction.deferReply();
+      await interaction.deferReply(); // FIX timeout
 
       const voiceChannel = interaction.member.voice.channel;
       if (!voiceChannel) {
-        return interaction.editReply('❌ Join a voice channel first');
+        return interaction.editReply('❌ Join voice first');
       }
 
       let connection = getVoiceConnection(interaction.guild.id);
+
       if (!connection) {
         connection = joinVoiceChannel({
           channelId: voiceChannel.id,
@@ -108,14 +123,14 @@ client.on(Events.InteractionCreate, async interaction => {
 
       connection.subscribe(player);
 
-      // ===== COUNTDOWN =====
+      // ===== COUNT =====
       if (interaction.customId.startsWith('count')) {
         const number = interaction.customId.replace('count', '');
         const file = `${number}to0.mp3`;
         const filePath = path.join(__dirname, 'audio', file);
 
         if (!fs.existsSync(filePath)) {
-          return interaction.editReply(`❌ Missing file: ${file}`);
+          return interaction.editReply(`❌ Missing: ${file}`);
         }
 
         const resource = createAudioResource(filePath);
@@ -129,7 +144,7 @@ client.on(Events.InteractionCreate, async interaction => {
         player.once(AudioPlayerStatus.Idle, async () => {
           try {
             await interaction.channel.send({
-              content: '🔁 Choose next countdown:',
+              content: '🔁 Again?',
               components: buildButtons(),
             });
           } catch (err) {
@@ -153,7 +168,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
   } catch (err) {
-    console.error('❌ Error:', err);
+    console.error("❌ ERROR:", err);
 
     if (interaction.deferred || interaction.replied) {
       interaction.editReply('❌ Error').catch(() => {});
@@ -163,27 +178,11 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-// ===== LOGIN =====
-console.log("🚀 Starting bot...");
-
-if (!process.env.TOKEN) {
-  console.error("❌ TOKEN MISSING");
-  process.exit(1);
-}
-
-client.login(process.env.TOKEN)
-  .then(() => {
-    console.log("✅ LOGIN SUCCESS");
-  })
-  .catch(err => {
-    console.error("❌ LOGIN FAILED:", err);
-  });
-console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
-// ===== KEEP ALIVE =====
+// ===== EXPRESS (KEEP ALIVE) =====
 const app = express();
 
 app.get('/', (req, res) => {
-  res.send('Bot is running');
+  res.send('Bot running');
 });
 
 const PORT = process.env.PORT || 3000;
