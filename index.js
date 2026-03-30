@@ -166,14 +166,19 @@ client.on(Events.InteractionCreate, async interaction => {
 // ===== LOGIN =====
 console.log("🚀 Starting bot...");
 
-client.login(token)
-  .then(() => console.log("✅ Login success"))
-  .catch(err => console.error("❌ Login error:", err));
+if (!process.env.TOKEN) {
+  console.error("❌ TOKEN MISSING");
+  process.exit(1);
+}
 
-// ===== ERROR HANDLER =====
-process.on("unhandledRejection", console.error);
-process.on("uncaughtException", console.error);
-
+client.login(process.env.TOKEN)
+  .then(() => {
+    console.log("✅ LOGIN SUCCESS");
+  })
+  .catch(err => {
+    console.error("❌ LOGIN FAILED:", err);
+  });
+console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
 // ===== KEEP ALIVE =====
 const app = express();
 
