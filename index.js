@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const express = require('express');
+
 const {
   Client,
   GatewayIntentBits,
@@ -7,10 +9,8 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  SlashCommandBuilder,
-  REST,
-  Routes,
 } = require('discord.js');
+
 const {
   joinVoiceChannel,
   createAudioPlayer,
@@ -23,6 +23,7 @@ const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
 const token = process.env.TOKEN;
 
+// ===== CLIENT =====
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
 });
@@ -33,6 +34,7 @@ client.once(Events.ClientReady, () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
+// ===== BUTTON DATA =====
 const countdownButtons = [
   { id: 'count5', label: '5️⃣ Countdown 5 to 0' },
   { id: 'count10', label: '🔟 Countdown 10 to 0' },
@@ -52,6 +54,7 @@ const extraButtons = [
 
 function buildButtonRows() {
   const rows = [];
+
   for (let i = 0; i < countdownButtons.length; i += 5) {
     rows.push(
       new ActionRowBuilder().addComponents(
@@ -69,119 +72,143 @@ function buildButtonRows() {
   return rows;
 }
 
-// Slash command registration
-const commands = [
-  new SlashCommandBuilder()
-    .setName('countdown')
-    .setDescription('Start a countdown in voice channel'),
-];
-
-const rest = new REST({ version: '10' }).setToken(token);
-(async () => {
-  try {
-    await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
-      body: commands,
-    });
-    console.log('✅ Slash command registered');
-  } catch (err) {
-    console.error('❌ Error registering command:', err);
-  }
-})();
-
+// ===== INTERACTION =====
 client.on(Events.InteractionCreate, async interaction => {
-  if (interaction.isChatInputCommand() && interaction.commandName === 'countdown') {
-    const voiceChannel = interaction.member.voice.channel;
-    if (!voiceChannel) {
-      return interaction.reply({ content: '❌ You must join a voice channel first.', ephemeral: true });
-    }
+  try {
 
-    let connection = getVoiceConnection(interaction.guild.id);
-    if (!connection || connection.joinConfig.channelId !== voiceChannel.id) {
-      connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: interaction.guild.id,
-        adapterCreator: interaction.guild.voiceAdapterCreator,
-      });
-    }
+    // ===== SLASH COMMAND =====
+    if (interaction.isChatInputCommand() && interaction.commandName === 'countdown') {
+      const voiceChannel = interaction.member.voice.channel;
 
-    connection.subscribe(player);
-
-    await interaction.reply({
-      content: '🔊 Choose a countdown option:',
-      components: buildButtonRows(),
-    });
-  }
-
-  if (interaction.isButton()) {
-    const voiceChannel = interaction.member.voice.channel;
-    if (!voiceChannel) {
-      return interaction.reply({ content: '❌ You must be in a voice channel.', ephemeral: true });
-    }
-
-    let connection = getVoiceConnection(interaction.guild.id);
-    if (!connection || connection.joinConfig.channelId !== voiceChannel.id) {
-      connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: interaction.guild.id,
-        adapterCreator: interaction.guild.voiceAdapterCreator,
-      });
-    }
-
-    connection.subscribe(player);
-
-    if (interaction.customId.startsWith('count')) {
-      const number = interaction.customId.replace('count', '');
-      const file = `${number}to0.mp3`;
-      const filePath = path.join(__dirname, 'audio', file);
-
-      if (!fs.existsSync(filePath)) {
-        return interaction.reply({ content: `❌ File not found: ${file}`, ephemeral: true });
+      if (!voiceChannel) {
+        return interaction.reply({
+          content: '❌ You must join a voice channel first.',
+          ephemeral: true,
+        });
       }
 
-      const resource = createAudioResource(filePath);
-      player.stop(); // Stop any existing audio
-      player.play(resource);
+      let connection = getVoiceConnection(interaction.guild.id);
+      if (!connection || connection.joinConfig.channelId !== voiceChannel.id) {
+        connection = joinVoiceChannel({
+          channelId: voiceChannel.id,
+          guildId: interaction.guild.id,
+          adapterCreator: interaction.guild.voiceAdapterCreator,
+        });
+      }
 
-      await interaction.reply({ content: `▶️ Playing: ${file}` });
+      connection.subscribe(player);
 
-      player.removeAllListeners(AudioPlayerStatus.Idle); // prevent stacking
-      player.once(AudioPlayerStatus.Idle, async () => {
-        try {
-          await interaction.channel.send({
-            content: '✅ irene is so strong, cute, pretty, smart, tolerant, helpful = super woman??',
-            components: buildButtonRows(),
+      return interaction.reply({
+        content: '🔊 Choose a countdown option:',
+        components: buildButtonRows(),
+      });
+    }
+
+    // ===== BUTTON =====
+    if (interaction.isButton()) {
+
+      await interaction.deferReply(); // 🔥 FIX CHÍNH
+
+      const voiceChannel = interaction.member.voice.channel;
+      if (!voiceChannel) {
+        return interaction.editReply({
+          content: '❌ You must be in a voice channel.',
+        });
+      }
+
+      let connection = getVoiceConnection(interaction.guild.id);
+      if (!connection || connection.joinConfig.channelId !== voiceChannel.id) {
+        connection = joinVoiceChannel({
+          channelId: voiceChannel.id,
+          guildId: interaction.guild.id,
+          adapterCreator: interaction.guild.voiceAdapterCreator,
+        });
+      }
+
+      connection.subscribe(player);
+
+      // ===== COUNTDOWN =====
+      if (interaction.customId.startsWith('count')) {
+        const number = interaction.customId.replace('count', '');
+        const file = `${number}to0.mp3`;
+        const filePath = path.join(__dirname, 'audio', file);
+
+        if (!fs.existsSync(filePath)) {
+          return interaction.editReply({
+            content: `❌ File not found: ${file}`,
           });
-        } catch (err) {
-          console.error('❌ Error sending new buttons:', err);
         }
-      });
-    }
 
-    if (interaction.customId === 'stop') {
-      player.stop();
-      await interaction.reply({ content: '⏹ Countdown stopped.' });
-    }
+        const resource = createAudioResource(filePath);
+        player.stop();
+        player.play(resource);
 
-    if (interaction.customId === 'leave') {
-      const conn = getVoiceConnection(interaction.guild.id);
-      if (conn) {
-        conn.destroy();
-        await interaction.reply({ content: '👋 Bot has left the voice channel.' });
-      } else {
-        await interaction.reply({ content: '❌ Bot is not connected.', ephemeral: true });
+        await interaction.editReply({
+          content: `▶️ Playing: ${file}`,
+        });
+
+        player.removeAllListeners(AudioPlayerStatus.Idle);
+        player.once(AudioPlayerStatus.Idle, async () => {
+          try {
+            await interaction.channel.send({
+              content: '✅ irene is so strong, cute, pretty, smart, tolerant, helpful = super woman??',
+              components: buildButtonRows(),
+            });
+          } catch (err) {
+            console.error('Send button error:', err);
+          }
+        });
       }
+
+      // ===== STOP =====
+      if (interaction.customId === 'stop') {
+        player.stop();
+        return interaction.editReply({
+          content: '⏹ Countdown stopped.',
+        });
+      }
+
+      // ===== LEAVE =====
+      if (interaction.customId === 'leave') {
+        const conn = getVoiceConnection(interaction.guild.id);
+        if (conn) {
+          conn.destroy();
+          return interaction.editReply({
+            content: '👋 Bot has left the voice channel.',
+          });
+        } else {
+          return interaction.editReply({
+            content: '❌ Bot is not connected.',
+          });
+        }
+      }
+    }
+
+  } catch (err) {
+    console.error('❌ Interaction error:', err);
+
+    if (interaction.deferred || interaction.replied) {
+      interaction.editReply({ content: '❌ Error occurred!' }).catch(() => {});
+    } else {
+      interaction.reply({ content: '❌ Error occurred!', ephemeral: true }).catch(() => {});
     }
   }
 });
 
-client.login(token);
+// ===== LOGIN =====
+client.login(token)
+  .then(() => console.log("✅ Login success"))
+  .catch(err => console.error("❌ Login error:", err));
 
-// Keep web server alive (for Render free plan)
-const express = require('express');
+// ===== GLOBAL ERROR =====
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
+
+// ===== KEEP ALIVE (RENDER) =====
 const app = express();
 
 app.get('/', (req, res) => {
-  res.send('🤖 Discord bot is running!');
+  res.send('🤖 Bot is running!');
 });
 
 const PORT = process.env.PORT || 3000;
