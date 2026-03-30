@@ -11,13 +11,13 @@ const {
   ButtonStyle,
 } = require('discord.js');
 
-const {
-  joinVoiceChannel,
-  createAudioPlayer,
-  createAudioResource,
-  AudioPlayerStatus,
-  getVoiceConnection,
-} = require('@discordjs/voice');
+// const {
+//   joinVoiceChannel,
+//   createAudioPlayer,
+//   createAudioResource,
+//   AudioPlayerStatus,
+//   getVoiceConnection,
+// } = require('@discordjs/voice');
 
 const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
