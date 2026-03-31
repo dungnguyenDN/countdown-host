@@ -1,30 +1,47 @@
-const { REST, Routes, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const clientId = process.env.CLIENT_ID;
-const guildId = process.env.GUILD_ID;
+const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const path = require('path');
 
+// 1. Cấu hình dotenv trỏ thẳng vào file .env trong cùng thư mục
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
+// 2. Kiểm tra biến môi trường trước khi chạy
 const token = process.env.TOKEN;
+const clientId = process.env.CLIENT_ID;
 
+if (!token || !clientId) {
+    console.error("❌ ERROR: Missing TOKEN or CLIENT_ID in .env file!");
+    console.log("Check if your .env file exists in: " + __dirname);
+    process.exit(1);
+}
 
-// Slash command
+// 3. Định nghĩa lệnh /countdown
 const commands = [
-  new SlashCommandBuilder()
-    .setName('countdown')
-    .setDescription('Controls for wos countdown'),
-];
+    new SlashCommandBuilder()
+        .setName('countdown')
+        .setDescription('Start the Irene Countdown Timer (Whiteout Survival)'),
+].map(command => command.toJSON());
 
+// 4. Khởi tạo REST client
 const rest = new REST({ version: '10' }).setToken(token);
 
+// 5. Triển khai (Deploy)
 (async () => {
-  try {
-    console.log('🔄 Deploying commands...');
+    try {
+        console.log(`⏳ Started refreshing ${commands.length} application (/) commands...`);
 
-    await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
-      { body: commands }
-    );
+        // Đẩy lệnh Global (Sẽ dùng được ở TẤT CẢ các Server mà Bot tham gia)
+        const data = await rest.put(
+            Routes.applicationCommands(clientId),
+            { body: commands },
+        );
 
-    console.log('✅ Successfully registered commands.');
-  } catch (error) {
-    console.error(error);
-  }
+        console.log(`✅ SUCCESS: Registered ${data.length} commands globally!`);
+        console.log(`💡 Note: It may take a few minutes for Discord to update the command list.`);
+        
+        process.exit(0);
+    } catch (error) {
+        console.error("❌ DEPLOY ERROR:");
+        console.error(error);
+        process.exit(1);
+    }
 })();
