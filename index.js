@@ -7,7 +7,7 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// ✅ FFmpeg cho Render
+// ✅ FFmpeg fix cho Render
 const ffmpeg = require('ffmpeg-static');
 process.env.FFMPEG_PATH = ffmpeg;
 
@@ -40,24 +40,32 @@ const player = createAudioPlayer({
   behaviors: { noSubscriber: NoSubscriberBehavior.Play },
 });
 
-// ✅ Log lỗi
+// ✅ bắt lỗi player
 player.on('error', (error) => {
   console.error('Player error:', error);
 });
 
-// 🎨 UI (emoji dùng Unicode để tránh lỗi)
-const buildInterface = (statusText = "Ready to start", currentSec = null, isDisabled = false) => {
+// 🎨 UI (FIX hoàn toàn lỗi string + emoji)
+function buildInterface(statusText, currentSec, isDisabled) {
+  if (!statusText) statusText = "Ready to start";
+
+  let desc = "**Status:** " + statusText + "\n";
+
+  if (currentSec) {
+    desc += "**Running:** " + currentSec + " seconds";
+  } else {
+    desc += "-> Select a button below";
+  }
+
   const embed = new EmbedBuilder()
     .setColor(isDisabled ? '#FF4500' : '#FFD700')
-    .setTitle("\u2728 Irene wishes you a great game! \u{1F609}")
-    .setDescription(
-      `**Status:** ${statusText}\n` +
-      (currentSec
-        ? `**Running:** \`${currentSec} seconds\` \u{1F3C3}`
-        : '\u{1F449} Select a button below')
-    )
+    .setTitle("✨ Irene wishes you a great game! 😉") // vẫn giữ emoji
+    .setDescription(desc)
     .setTimestamp()
-    .setFooter({ text: 'LuluBebe', iconURL: client.user.displayAvatarURL() });
+    .setFooter({
+      text: 'LuluBebe',
+      iconURL: client.user.displayAvatarURL(),
+    });
 
   const createRow = (btns) =>
     new ActionRowBuilder().addComponents(
@@ -94,23 +102,28 @@ const buildInterface = (statusText = "Ready to start", currentSec = null, isDisa
     new ButtonBuilder().setCustomId('leave').setLabel('Leave').setEmoji('👋').setStyle(ButtonStyle.Secondary)
   );
 
-  return { embeds: [embed], components: [row1, row2, row3, rowActions] };
-};
+  return {
+    embeds: [embed],
+    components: [row1, row2, row3, rowActions],
+  };
+}
 
 // READY
 client.once(Events.ClientReady, () => {
-  console.log(`BOT ONLINE: ${client.user.tag}`);
+  console.log("BOT ONLINE: " + client.user.tag);
 });
 
 // INTERACTION
-client.on(Events.InteractionCreate, async interaction => {
+client.on(Events.InteractionCreate, async (interaction) => {
 
   // COMMAND
   if (interaction.isChatInputCommand() && interaction.commandName === 'countdown') {
     await interaction.deferReply();
 
     const voiceChannel = interaction.member.voice.channel;
-    if (!voiceChannel) return interaction.editReply('Join voice first!');
+    if (!voiceChannel) {
+      return interaction.editReply('Join voice first!');
+    }
 
     const connection = joinVoiceChannel({
       channelId: voiceChannel.id,
@@ -119,7 +132,7 @@ client.on(Events.InteractionCreate, async interaction => {
     });
 
     connection.on('stateChange', (oldState, newState) => {
-      console.log(`Connection: ${oldState.status} -> ${newState.status}`);
+      console.log("Connection:", oldState.status, "->", newState.status);
     });
 
     try {
@@ -159,10 +172,10 @@ client.on(Events.InteractionCreate, async interaction => {
     // PLAY
     if (interaction.customId.startsWith('count')) {
       const number = interaction.customId.replace('count', '');
-      const filePath = path.resolve(__dirname, 'audio', `${number}to0.mp3`);
+      const filePath = path.resolve(__dirname, 'audio', number + "to0.mp3");
 
       if (!fs.existsSync(filePath)) {
-        console.error(`Missing file: ${filePath}`);
+        console.error("Missing file:", filePath);
         return;
       }
 
@@ -178,7 +191,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
         player.once(AudioPlayerStatus.Idle, async () => {
           try {
-            await interaction.editReply(buildInterface(`Finished ${number}s`, null, false));
+            await interaction.editReply(buildInterface("Finished " + number + "s", null, false));
           } catch (err) {
             console.error(err);
           }
@@ -208,7 +221,7 @@ client.on(Events.InteractionCreate, async interaction => {
 app.get('/', (req, res) => res.send('Bot is alive'));
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("Server running on port " + PORT);
   client.login(process.env.TOKEN);
 });
 ```
