@@ -7,7 +7,7 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// ✅ FIX FFmpeg cho Render
+// ✅ FFmpeg cho Render
 const ffmpeg = require('ffmpeg-static');
 process.env.FFMPEG_PATH = ffmpeg;
 
@@ -40,17 +40,22 @@ const player = createAudioPlayer({
   behaviors: { noSubscriber: NoSubscriberBehavior.Play },
 });
 
-// ✅ Log lỗi player
+// ✅ Log lỗi
 player.on('error', (error) => {
-  console.error('❌ Player error:', error);
+  console.error('Player error:', error);
 });
 
-// --- 🎨 UI ---
+// 🎨 UI (emoji dùng Unicode để tránh lỗi)
 const buildInterface = (statusText = "Ready to start", currentSec = null, isDisabled = false) => {
   const embed = new EmbedBuilder()
     .setColor(isDisabled ? '#FF4500' : '#FFD700')
-    .setTitle(`✨ Irene wishes you a great game! 😉`)
-    .setDescription(`**Status:** ${statusText}\n${currentSec ? `**Running:** \`${currentSec} seconds\`` : '👉 Select a button below'}`)
+    .setTitle("\u2728 Irene wishes you a great game! \u{1F609}")
+    .setDescription(
+      `**Status:** ${statusText}\n` +
+      (currentSec
+        ? `**Running:** \`${currentSec} seconds\` \u{1F3C3}`
+        : '\u{1F449} Select a button below')
+    )
     .setTimestamp()
     .setFooter({ text: 'LuluBebe', iconURL: client.user.displayAvatarURL() });
 
@@ -92,20 +97,20 @@ const buildInterface = (statusText = "Ready to start", currentSec = null, isDisa
   return { embeds: [embed], components: [row1, row2, row3, rowActions] };
 };
 
-// --- READY ---
+// READY
 client.once(Events.ClientReady, () => {
-  console.log(`✅ BOT ONLINE: ${client.user.tag}`);
+  console.log(`BOT ONLINE: ${client.user.tag}`);
 });
 
-// --- INTERACTIONS ---
+// INTERACTION
 client.on(Events.InteractionCreate, async interaction => {
 
-  // ===== COMMAND =====
+  // COMMAND
   if (interaction.isChatInputCommand() && interaction.commandName === 'countdown') {
     await interaction.deferReply();
 
     const voiceChannel = interaction.member.voice.channel;
-    if (!voiceChannel) return interaction.editReply('❌ Join voice first!');
+    if (!voiceChannel) return interaction.editReply('Join voice first!');
 
     const connection = joinVoiceChannel({
       channelId: voiceChannel.id,
@@ -113,24 +118,22 @@ client.on(Events.InteractionCreate, async interaction => {
       adapterCreator: interaction.guild.voiceAdapterCreator,
     });
 
-    // ✅ Debug connection
     connection.on('stateChange', (oldState, newState) => {
-      console.log(`🔊 Connection: ${oldState.status} -> ${newState.status}`);
+      console.log(`Connection: ${oldState.status} -> ${newState.status}`);
     });
 
     try {
-      // ✅ FIX timeout (20s cho Render)
       await entersState(connection, VoiceConnectionStatus.Ready, 20000);
       connection.subscribe(player);
     } catch (err) {
-      console.error('❌ Voice connection error:', err);
-      return interaction.editReply('❌ Cannot connect to voice!');
+      console.error(err);
+      return interaction.editReply('Cannot connect to voice!');
     }
 
     await interaction.editReply(buildInterface());
   }
 
-  // ===== BUTTON =====
+  // BUTTON
   if (interaction.isButton()) {
     const voiceChannel = interaction.member.voice.channel;
     if (!voiceChannel) return;
@@ -153,30 +156,29 @@ client.on(Events.InteractionCreate, async interaction => {
       }
     }
 
-    // ===== PLAY =====
+    // PLAY
     if (interaction.customId.startsWith('count')) {
       const number = interaction.customId.replace('count', '');
       const filePath = path.resolve(__dirname, 'audio', `${number}to0.mp3`);
 
       if (!fs.existsSync(filePath)) {
-        console.error(`❌ Missing file: ${filePath}`);
+        console.error(`Missing file: ${filePath}`);
         return;
       }
 
       try {
-        await interaction.update(buildInterface("🔴 COUNTDOWN IN PROGRESS...", number, true));
+        await interaction.update(buildInterface("COUNTDOWN IN PROGRESS...", number, true));
 
         await entersState(connection, VoiceConnectionStatus.Ready, 20000);
 
-        const resource = createAudioResource(filePath); // ✅ FIX
-
+        const resource = createAudioResource(filePath);
         player.play(resource);
 
         player.removeAllListeners(AudioPlayerStatus.Idle);
 
         player.once(AudioPlayerStatus.Idle, async () => {
           try {
-            await interaction.editReply(buildInterface(`✅ Finished ${number}s!`, null, false));
+            await interaction.editReply(buildInterface(`Finished ${number}s`, null, false));
           } catch (err) {
             console.error(err);
           }
@@ -184,29 +186,29 @@ client.on(Events.InteractionCreate, async interaction => {
 
       } catch (err) {
         console.error(err);
-        await interaction.editReply(buildInterface("❌ Error playing audio", null, false));
+        await interaction.editReply(buildInterface("Error playing audio", null, false));
       }
     }
 
-    // ===== STOP =====
+    // STOP
     if (interaction.customId === 'stop') {
       player.stop();
-      await interaction.update(buildInterface("⏹️ Stopped", null, false));
+      await interaction.update(buildInterface("Stopped", null, false));
     }
 
-    // ===== LEAVE =====
+    // LEAVE
     if (interaction.customId === 'leave') {
       if (connection) connection.destroy();
-      await interaction.update(buildInterface("👋 Left channel", null, false));
+      await interaction.update(buildInterface("Left channel", null, false));
     }
   }
 });
 
-// --- KEEP ALIVE (Render) ---
-app.get('/', (req, res) => res.send('Bot is alive!'));
+// KEEP ALIVE
+app.get('/', (req, res) => res.send('Bot is alive'));
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🌐 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
   client.login(process.env.TOKEN);
 });
 ```
